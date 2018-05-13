@@ -1,0 +1,117 @@
+#include <SPI.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define OLED_RESET 4
+Adafruit_SSD1306 display(OLED_RESET);
+
+#define NUMFLAKES 10
+#define XPOS 0
+#define YPOS 1
+#define DELTAY 2
+double count=0;
+
+// this is the Width and Height of Display which is 128 xy 32 
+#define LOGO16_GLCD_HEIGHT 32
+#define LOGO16_GLCD_WIDTH  128 
+
+// Code 2
+ volatile byte half_revolutions;
+ unsigned int rpm;
+ unsigned long timeold;
+ float voltage;
+
+//Code 3
+ float R1 = 30000;
+ float R2 = 7500;
+
+void setup()   {                
+  Serial.begin(115200);
+
+// Code 2
+
+  attachInterrupt(0, magnet_detect, RISING);//Initialize the intterrupt pin (Arduino digital pin 2)
+   half_revolutions = 0;
+   rpm = 0;
+   timeold = 0;
+
+  // by default, we'll generate the high voltage from the 3.3v line internally! (neat!)
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  // initialize with the I2C addr 0x3C (for the 128x32)
+   
+}
+
+
+void loop() {
+  if (half_revolutions >= 10) { 
+     rpm = 30*1000/(millis() - timeold)*half_revolutions;
+     timeold = millis();
+     half_revolutions = 0;
+  }
+ int sensorValue = analogRead(A1);
+  voltage = (5*sensorValue*(R1+R2))/(1024*R2); 
+  Serial.print(" voltage ");
+  Serial.print("\t");
+   Serial.print(voltage);
+   Serial.print ("\n ");
+  
+ delay(150);
+  
+  String rpmshow =  String(rpm, 2);// using a float and the 
+  String Vshow =  String(voltage, 2);// using a float and the 
+  display.clearDisplay();
+  simpleText("RPM:", 4, 3, 2, false);
+  rpmData(rpmshow, 72, 3, 2, false);
+  simpleText("Voltage:", 4, 21, 1, false);
+  Vdata(Vshow, 72, 21, 1, false);
+  simpleText("V", 110, 21, 1, false);
+ display.drawRect(1, 1, 126,31, WHITE);
+  display.display();
+   delay(1); 
+}
+
+void simpleText(String text, int x, int y,int size, boolean d) {
+
+  display.setTextSize(size);
+  display.setTextColor(WHITE);
+  display.setCursor(x,y);
+  display.println(text);
+  if(d){
+    display.display();
+  }
+}
+
+void rpmData(String text, int x, int y,int size, boolean d) {
+
+  display.setTextSize(size);
+  display.setTextColor(WHITE);
+  display.setCursor(x,y);
+  display.println(rpm);
+  if(d){
+    display.display();
+  }
+  //delay(100);
+}
+void Vdata(String text, int x, int y,int size, boolean d) {
+
+  display.setTextSize(size);
+  display.setTextColor(WHITE);
+  display.setCursor(x,y);
+  display.println(voltage);
+  if(d){
+    display.display();
+  }
+}
+void magnet_detect()//This function is called whenever a magnet/interrupt is detected by the arduino
+ {
+   half_revolutions++;
+   
+   Serial.print ("  Speed ");
+   Serial.print (" \t ");
+   Serial.print(rpm);
+   Serial.print (" \t ");
+   
+  // Serial.print ("/n");
+ }
+
+
